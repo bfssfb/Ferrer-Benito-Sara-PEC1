@@ -1,0 +1,177 @@
+---
+title: "PEC1.2"
+author: "Sara"
+date: "2024-11-04"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r}
+# Cargar las bibliotecas necesarias
+library(SummarizedExperiment)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+# Leer el archivo CSV
+archivo <- "C:/Users/Sara/Desktop/Máster/omicas/human_cachexia.csv"
+datos <- read.csv(archivo, row.names = 1)
+
+
+```
+Se sube el archivo y se lee el csv
+
+
+```{r}
+sum(is.na(datos))
+
+```
+
+No hay valores nulos
+
+```{r}
+datos$Muscle.loss <- factor(datos$Muscle.loss, levels = c("cachexic", "control"), labels = c(0, 1))
+str(datos)
+```
+Cambiamos la columna grupos a factor numérico y comprobamos 
+
+```{r}
+
+datos_matriz <- t(as.matrix(datos[, -which(names(datos) == "Muscle.loss")]))
+#datos_matriz
+
+grupo <- data.frame(Group = datos$Muscle.loss)
+sum_exp <- SummarizedExperiment(assays = list(counts = datos_matriz), colData = grupo)
+
+sum_exp
+
+dataframe <- as.data.frame(t(assay(sum_exp, "counts")))
+dataframe$Group <- colData(sum_exp)$Group
+
+print(str(dataframe))
+
+table(dataframe$Group)
+```
+En primer lugar se transpone la matriz ya que SummarizedExperiment trabaja con las columnas y filas al contrario y creamos el summarized experiment añadiendo la columna grupo como la condición para distinguir los dos grupos con los que vamos a trabajar 'cachexic' y 'control'
+
+Com print(str(dataframe)) comprobamos que todos los valores son numéricos.
+
+Viendo sum_exp se observan un total de 63 metabolitos estudiados y 77 individuos, 30 controles y 47 pacientes.
+
+
+
+
+```{r}
+
+media <- dataframe %>%
+  group_by(Group) %>%
+  summarise(across(everything(), list(mean = ~mean(., na.rm = TRUE), sd = ~sd(., na.rm = TRUE)), .names = "{col}_{fn}"))
+
+print(media)
+
+```
+Calculamos la media y la desviación típica en función de los dos grupos establecidos.
+
+```{r}
+for (metabolito in colnames(dataframe)) {
+  cajas <- ggplot(dataframe, aes_string(x = "Group", y = metabolito, fill = "Group")) + geom_boxplot() +
+  labs(title = paste("Diagrama de cajas de", metabolito), y = "Concentración", x = "Grupo")
+  
+  print(cajas)
+}
+`
+``
+```{r}
+
+library(dplyr)
+
+resultados <- data.frame(Variable = character(),
+                         p_value = numeric())
+
+variables <- colnames(df)[-ncol(df)]  
+
+for (var in variables) {
+
+  resultado <- t.test(df[[var]] ~ df$Group, var.equal = TRUE)  
+
+  resultados <- rbind(resultados, data.frame(Variable = var,
+                                              p_value = resultado$p.value))
+                      
+}
+
+print(resultados)
+
+
+```
+Creamos un dataframe donde guardas los pvalor obtenidos.
+Se elimina la columna de grupos, ya que sino la prueba no da buenos resultados al no ser valores numéricos.
+Se realiza el test t para cada metabolito y se almacena en el dataframe creado.
+
+Mostramos también los metabolitos que cambian de forma significativa en función de los grupos. Un número total de 40 de los 63 metabolitos estudiados.
+```{r}
+resultados2 <- resultados %>%
+  filter(p_value < 0.05)
+
+print(resultados2)
+
+contar <- nrow(resultados2)
+print(paste('número total de metabolitos cambios entre las dos poblaciones:', contar))
+
+```
+
+```{r}
+
+resultados10 <- resultados %>%
+  arrange(p_value) %>%
+  slice_head(n = 10)
+
+
+print(resultados10)
+
+
+
+resultados10mayores <- resultados %>%
+  arrange(desc(p_value)) %>%
+  slice_head(n = 10)
+
+
+print(resultados10mayores)
+```
+Sacamos por pantalla los 10 metabolitos con menor y mayor pvalor, para ello ordenamos el dataframe anterior en orden ascendente o descendente y leemos las 10 primeras lineas.
+```{r}
+
+ggplot(dataframe, aes(x = Group, y = Quinolinate, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para Quinolinate", y = "Valor", x = "Grupo")
+
+
+```
+
+```{r}
+ggplot(dataframe, aes(x = Group, y = Valine, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para Valina", y = "Valor", x = "Grupo")
+```
+```{r}
+ggplot(dataframe, aes(x = Group, y = N.N.Dimethylglycine, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para N.N", y = "Valor", x = "Grupo")
+```
+
+```{r}
+ggplot(dataframe, aes(x = Group, y = Leucine, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para Leu", y = "Valor", x = "Grupo")
+```
+```{r}
+ggplot(dataframe, aes(x = Group, y = Dimethylamine, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para Dma", y = "Valor", x = "Grupo")
+```
+```{r}
+ggplot(dataframe, aes(x = Group, y = X1.Methylnicotinamide, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Diagrama de Cajas para X1.M", y = "Valor", x = "Grupo")
+```
+
